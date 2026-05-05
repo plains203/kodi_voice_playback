@@ -1,4 +1,4 @@
-"""Intent handlers for KodiVoicePlayback and KodiPlayMovie."""
+"""Intent handlers for KodiPlayNextEpisode and KodiPlayMovie."""
 from __future__ import annotations
 
 import logging
@@ -15,7 +15,7 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_intents(hass: HomeAssistant) -> None:
     """Register all intent handlers."""
-    intent.async_register(hass, KodiVoicePlaybackHandler())
+    intent.async_register(hass, KodiPlayNextEpisodeHandler())
     intent.async_register(hass, KodiPlayMovieHandler())
 
 
@@ -69,8 +69,8 @@ def _no_instances_response(intent_obj):
 # TV: next unplayed episode
 # ──────────────────────────────────────────────────────────────────────────────
 
-class KodiVoicePlaybackHandler(intent.IntentHandler):
-    """Handle KodiVoicePlayback — play the next unwatched episode of a show."""
+class KodiPlayNextEpisodeHandler(intent.IntentHandler):
+    """Handle KodiPlayNextEpisode — play the next unwatched episode of a show."""
 
     intent_type = INTENT_TYPE
     slot_schema = {
@@ -97,7 +97,7 @@ class KodiVoicePlaybackHandler(intent.IntentHandler):
         if not kodi_device:
             show_name, kodi_device = extract_device_from_show_name(show_name, known_names)
 
-        _LOGGER.debug("KodiVoicePlayback: show='%s' device='%s'", show_name, kodi_device)
+        _LOGGER.debug("KodiPlayNextEpisode: show='%s' device='%s'", show_name, kodi_device)
 
         entry = _find_entry(entries, kodi_device)
         name  = entry.data.get(CONF_KODI_NAME, entry.data[CONF_HOST])

@@ -50,7 +50,7 @@ async def _test_connection(hass, data: dict) -> str | None:
         return "cannot_connect"
 
 
-class KodiVoicePlaybackConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class KodiPlayNextEpisodeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle the initial setup UI."""
 
     VERSION = 1
@@ -78,10 +78,10 @@ class KodiVoicePlaybackConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(config_entry):
-        return KodiVoicePlaybackOptionsFlow(config_entry)
+        return KodiPlayNextEpisodeOptionsFlow(config_entry)
 
 
-class KodiVoicePlaybackOptionsFlow(config_entries.OptionsFlow):
+class KodiPlayNextEpisodeOptionsFlow(config_entries.OptionsFlow):
     """Allow editing an existing Kodi instance."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:

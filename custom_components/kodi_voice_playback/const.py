@@ -9,5 +9,5 @@ CONF_USERNAME      = "username"
 CONF_PASSWORD      = "password"
 
 DEFAULT_PORT       = 8080
-INTENT_TYPE        = "KodiVoicePlayback"
+INTENT_TYPE        = "KodiPlayNextEpisode"
 MOVIE_INTENT_TYPE  = "KodiPlayMovie"

@@ -1,6 +1,6 @@
 language: "en"
 intents:
-  KodiVoicePlayback:
+  KodiPlayNextEpisode:
     data:
       - sentences:
           - "play (the next episode of|next episode of) {show_name} [on {kodi_device}]"
