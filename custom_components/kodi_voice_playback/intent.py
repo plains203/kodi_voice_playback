@@ -1,9 +1,9 @@
-"""Intent handlers for KodiPlayNextEpisode and KodiPlayMovie."""
+"""Intent handlers for Kodi Voice Playback."""
 from __future__ import annotations
 
 import logging
 
-from homeassistant.core import HomeAssistant
+from homeassistant.core    import HomeAssistant
 from homeassistant.helpers import intent
 
 from .const    import DOMAIN, CONF_KODI_NAME, CONF_HOST, CONF_PORT, CONF_USERNAME, CONF_PASSWORD, INTENT_TYPE, MOVIE_INTENT_TYPE
@@ -14,27 +14,18 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_intents(hass: HomeAssistant) -> None:
-    """Register all intent handlers."""
     intent.async_register(hass, KodiPlayNextEpisodeHandler())
     intent.async_register(hass, KodiPlayMovieHandler())
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Shared helpers
-# ──────────────────────────────────────────────────────────────────────────────
-
 def _find_entry(entries, device_hint: str):
-    """Return the config entry whose kodi_name best matches device_hint."""
     if not device_hint:
         return entries[0]
-
     hint = device_hint.lower().replace("kodi", "").strip()
-
     for e in entries:
         n = e.data.get(CONF_KODI_NAME, "").lower()
         if hint in n or n in hint:
             return e
-
     hint_words = set(hint.split())
     best_score, best = 0.0, None
     for e in entries:
@@ -42,7 +33,6 @@ def _find_entry(entries, device_hint: str):
         score = len(hint_words & name_words) / max(len(hint_words), 1)
         if score > best_score:
             best_score, best = score, e
-
     return best if (best and best_score > 0) else entries[0]
 
 
@@ -56,33 +46,24 @@ def _get_kodi(hass, entry) -> KodiRPC:
     )
 
 
-def _no_instances_response(intent_obj):
-    r = intent_obj.create_response()
-    r.async_set_speech(
+def _no_instances_speech():
+    return (
         "No Kodi instances are configured. "
         "Add one via Settings, Devices and Services, Kodi Voice Playback."
     )
-    return r
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# TV: next unplayed episode
-# ──────────────────────────────────────────────────────────────────────────────
 
 class KodiPlayNextEpisodeHandler(intent.IntentHandler):
-    """Handle KodiPlayNextEpisode — play the next unwatched episode of a show."""
-
     intent_type = INTENT_TYPE
-    slot_schema = {
-        "show_name":   intent.non_empty_string,
-        "kodi_device": intent.non_empty_string,
-    }
+
+    # No slot_schema — non_empty_string was removed in newer HA versions
+    # Slots are validated manually inside async_handle instead
 
     async def async_handle(self, intent_obj: intent.Intent) -> intent.IntentResponse:
         hass        = intent_obj.hass
         slots       = intent_obj.slots
-        show_name   = slots.get("show_name",   {}).get("value", "")
-        kodi_device = slots.get("kodi_device", {}).get("value", "")
+        show_name   = slots.get("show_name",   {}).get("value", "").strip()
+        kodi_device = slots.get("kodi_device", {}).get("value", "").strip()
         response    = intent_obj.create_response()
 
         if not show_name:
@@ -91,7 +72,8 @@ class KodiPlayNextEpisodeHandler(intent.IntentHandler):
 
         entries = hass.config_entries.async_entries(DOMAIN)
         if not entries:
-            return _no_instances_response(intent_obj)
+            response.async_set_speech(_no_instances_speech())
+            return response
 
         known_names = [e.data.get(CONF_KODI_NAME, "") for e in entries]
         if not kodi_device:
@@ -115,7 +97,6 @@ class KodiPlayNextEpisodeHandler(intent.IntentHandler):
 
         show_title = matched["title"]
         show_id    = matched["tvshowid"]
-        _LOGGER.debug("Matched show: '%s' (id=%s)", show_title, show_id)
 
         episode = await kodi.get_next_episode(show_id)
         if not episode:
@@ -147,24 +128,14 @@ class KodiPlayNextEpisodeHandler(intent.IntentHandler):
         return response
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Movies
-# ──────────────────────────────────────────────────────────────────────────────
-
 class KodiPlayMovieHandler(intent.IntentHandler):
-    """Handle KodiPlayMovie — play a movie from the Kodi library."""
-
     intent_type = MOVIE_INTENT_TYPE
-    slot_schema = {
-        "movie_name":  intent.non_empty_string,
-        "kodi_device": intent.non_empty_string,
-    }
 
     async def async_handle(self, intent_obj: intent.Intent) -> intent.IntentResponse:
         hass        = intent_obj.hass
         slots       = intent_obj.slots
-        movie_name  = slots.get("movie_name",  {}).get("value", "")
-        kodi_device = slots.get("kodi_device", {}).get("value", "")
+        movie_name  = slots.get("movie_name",  {}).get("value", "").strip()
+        kodi_device = slots.get("kodi_device", {}).get("value", "").strip()
         response    = intent_obj.create_response()
 
         if not movie_name:
@@ -173,7 +144,8 @@ class KodiPlayMovieHandler(intent.IntentHandler):
 
         entries = hass.config_entries.async_entries(DOMAIN)
         if not entries:
-            return _no_instances_response(intent_obj)
+            response.async_set_speech(_no_instances_speech())
+            return response
 
         known_names = [e.data.get(CONF_KODI_NAME, "") for e in entries]
         if not kodi_device:
@@ -198,7 +170,6 @@ class KodiPlayMovieHandler(intent.IntentHandler):
         movie_title = matched["title"]
         movie_file  = matched["file"]
         resume_s    = matched.get("resume", {}).get("position", 0)
-        _LOGGER.debug("Matched movie: '%s'", movie_title)
 
         await kodi.play(movie_file, resume=resume_s > 0)
 
