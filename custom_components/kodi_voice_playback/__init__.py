@@ -5,39 +5,51 @@ import logging
 import os
 import shutil
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core            import HomeAssistant
+from homeassistant.config_entries  import ConfigEntry
+from homeassistant.core            import HomeAssistant, callback
+from homeassistant.helpers.event   import async_call_later
+from homeassistant.helpers.start   import async_at_start
 
 from .const   import DOMAIN
 from .intent  import async_setup_intents
 
 _LOGGER = logging.getLogger(__name__)
 
-# Destination inside the HA config dir — DefaultAgent always loads from here
 _CUSTOM_SENTENCES_DIR  = "custom_sentences/en"
 _CUSTOM_SENTENCES_FILE = "kodi_voice_playback.yaml"
 
 
-def _install_sentences(config_dir: str) -> None:
-    """Copy bundled sentences/en.yaml to custom_sentences/en/ (sync, run in executor)."""
-    src = os.path.join(
-        os.path.dirname(__file__), "sentences", "en.yaml"
-    )
+def _install_sentences(config_dir: str) -> str:
+    """Copy bundled sentences/en.yaml to custom_sentences/en/. Returns dest path."""
+    src       = os.path.join(os.path.dirname(__file__), "sentences", "en.yaml")
     dest_dir  = os.path.join(config_dir, _CUSTOM_SENTENCES_DIR)
     dest_file = os.path.join(dest_dir, _CUSTOM_SENTENCES_FILE)
     os.makedirs(dest_dir, exist_ok=True)
     shutil.copy2(src, dest_file)
-    _LOGGER.debug("Installed sentences to %s", dest_file)
+    return dest_file
 
 
 def _remove_sentences(config_dir: str) -> None:
-    """Remove the installed sentences file (sync, run in executor)."""
     dest = os.path.join(config_dir, _CUSTOM_SENTENCES_DIR, _CUSTOM_SENTENCES_FILE)
     try:
         os.remove(dest)
-        _LOGGER.debug("Removed sentences from %s", dest)
+        _LOGGER.debug("Removed sentences: %s", dest)
     except FileNotFoundError:
         pass
+
+
+async def _reload_conversation(hass: HomeAssistant) -> None:
+    """Reload the conversation component so it picks up our sentences file."""
+    try:
+        await hass.services.async_call("conversation", "reload", blocking=True)
+        _LOGGER.info("Kodi Voice Playback: conversation reloaded — sentences now active")
+    except Exception as exc:
+        _LOGGER.error(
+            "Kodi Voice Playback: failed to reload conversation (%s). "
+            "Sentences will only be active after the next HA restart. "
+            "You can also trigger this manually via Developer Tools → Services → conversation.reload",
+            exc,
+        )
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
@@ -49,24 +61,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
 
     if not hass.data[DOMAIN].get("intents_registered"):
-        # Copy sentences to custom_sentences/ so Hassil can find them
-        await hass.async_add_executor_job(_install_sentences, hass.config.config_dir)
+        # 1. Copy sentences file to custom_sentences/en/
+        dest = await hass.async_add_executor_job(_install_sentences, hass.config.config_dir)
+        _LOGGER.info("Kodi Voice Playback: sentences installed to %s", dest)
 
-        # Register intent handlers
+        # 2. Register Python intent handlers
         await async_setup_intents(hass)
         hass.data[DOMAIN]["intents_registered"] = True
-        _LOGGER.info("Kodi Voice Playback: intent handlers and sentences registered")
 
-        # Reload the conversation agent so it picks up the new sentences file
-        # immediately — without this, sentences only take effect after a second restart
-        try:
-            await hass.services.async_call("conversation", "reload", blocking=True)
-            _LOGGER.info("Kodi Voice Playback: conversation reloaded, sentences active")
-        except Exception as exc:
-            _LOGGER.warning(
-                "Kodi Voice Playback: could not reload conversation agent "
-                "(sentences will load on next HA restart): %s", exc
-            )
+        # 3. Reload conversation — but AFTER HA has fully started, so the
+        #    service is available and the reload takes effect cleanly.
+        #    async_at_start fires immediately if HA is already running (e.g.
+        #    user added integration via UI), or waits for startup to complete.
+        @callback
+        def _on_ha_started(hass: HomeAssistant) -> None:
+            hass.async_create_task(_reload_conversation(hass))
+
+        async_at_start(hass, _on_ha_started)
 
     hass.data[DOMAIN][entry.entry_id] = entry.data
     _LOGGER.info(
@@ -84,7 +95,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     remaining = [k for k in hass.data[DOMAIN] if k != "intents_registered"]
     if not remaining:
-        # Last instance removed — clean up sentences and registered flag
         await hass.async_add_executor_job(_remove_sentences, hass.config.config_dir)
         hass.data[DOMAIN].pop("intents_registered", None)
         _LOGGER.info("Kodi Voice Playback: unloaded, sentences removed")
