@@ -49,13 +49,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
 
     if not hass.data[DOMAIN].get("intents_registered"):
-        # Install sentences so HA's local Hassil engine picks them up
+        # Copy sentences to custom_sentences/ so Hassil can find them
         await hass.async_add_executor_job(_install_sentences, hass.config.config_dir)
 
         # Register intent handlers
         await async_setup_intents(hass)
         hass.data[DOMAIN]["intents_registered"] = True
         _LOGGER.info("Kodi Voice Playback: intent handlers and sentences registered")
+
+        # Reload the conversation agent so it picks up the new sentences file
+        # immediately — without this, sentences only take effect after a second restart
+        try:
+            await hass.services.async_call("conversation", "reload", blocking=True)
+            _LOGGER.info("Kodi Voice Playback: conversation reloaded, sentences active")
+        except Exception as exc:
+            _LOGGER.warning(
+                "Kodi Voice Playback: could not reload conversation agent "
+                "(sentences will load on next HA restart): %s", exc
+            )
 
     hass.data[DOMAIN][entry.entry_id] = entry.data
     _LOGGER.info(
