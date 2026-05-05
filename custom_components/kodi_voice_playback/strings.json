@@ -1,0 +1,40 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add a Kodi instance",
+        "description": "Enter the connection details for your Kodi device. The **Voice name** is the word you say — e.g. 'lounge' lets you say 'play X on lounge kodi'.",
+        "data": {
+          "kodi_name":  "Voice name (e.g. lounge, bedroom)",
+          "host":       "Host / IP address",
+          "port":       "HTTP port",
+          "username":   "Username (leave blank if not set)",
+          "password":   "Password (leave blank if not set)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not connect to Kodi. Check the host, port, and that the Kodi HTTP API is enabled."
+    },
+    "abort": {
+      "already_configured": "This Kodi instance is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Edit Kodi instance",
+        "data": {
+          "kodi_name":  "Voice name",
+          "host":       "Host / IP address",
+          "port":       "HTTP port",
+          "username":   "Username",
+          "password":   "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not connect to Kodi. Check the host, port, and that the Kodi HTTP API is enabled."
+    }
+  }
+}

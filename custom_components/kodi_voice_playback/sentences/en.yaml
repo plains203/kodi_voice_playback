@@ -1,0 +1,27 @@
+language: "en"
+intents:
+  KodiVoicePlayback:
+    data:
+      - sentences:
+          - "play (the next episode of|next episode of) {show_name} [on {kodi_device}]"
+          - "continue [watching] {show_name} [on {kodi_device}]"
+          - "resume [watching] {show_name} [on {kodi_device}]"
+          - "watch {show_name} [on {kodi_device}]"
+          - "put on {show_name} [on {kodi_device}]"
+          - "play {show_name} [on kodi] [on {kodi_device}]"
+
+  KodiPlayMovie:
+    data:
+      - sentences:
+          - "play (the movie|movie) {movie_name} [on {kodi_device}]"
+          - "put on (the movie|movie) {movie_name} [on {kodi_device}]"
+          - "watch (the movie|movie) {movie_name} [on {kodi_device}]"
+          - "(start|resume) (the movie|movie) {movie_name} [on {kodi_device}]"
+
+lists:
+  show_name:
+    wildcard: true
+  movie_name:
+    wildcard: true
+  kodi_device:
+    wildcard: true

@@ -1,0 +1,13 @@
+{
+  "domain": "kodi_voice_playback",
+  "name": "Kodi Voice Playback",
+  "version": "1.0.0",
+  "license": "MIT",
+  "documentation": "https://github.com/yourusername/kodi-voice-playback-ha",
+  "issue_tracker": "https://github.com/yourusername/kodi-voice-playback-ha/issues",
+  "dependencies": [],
+  "codeowners": [],
+  "requirements": [],
+  "iot_class": "local_polling",
+  "config_flow": true
+}

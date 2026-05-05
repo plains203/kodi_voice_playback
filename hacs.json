@@ -1,0 +1,6 @@
+{
+  "name": "Kodi Voice Playback",
+  "description": "Voice control for Kodi via Home Assistant Assist — play the next unwatched TV episode or any movie in your library.",
+  "render_readme": true,
+  "homeassistant": "2023.8.0"
+}
